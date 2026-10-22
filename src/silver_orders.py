@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
+from orders_io import latest_snapshot, atomic_parquet_write
 
 
 BRONZE_DIR = Path(
@@ -27,20 +28,7 @@ VALID_STATUSES = {
 
 
 def latest_bronze_file():
-
-    files = list(
-        BRONZE_DIR.glob("orders_*.parquet")
-    )
-
-    if not files:
-        raise FileNotFoundError(
-            "No Orders Bronze files found."
-        )
-
-    return max(
-        files,
-        key=lambda file: file.stat().st_mtime
-    )
+    return latest_snapshot(BRONZE_DIR, "orders")
 
 
 def build_silver_orders():
@@ -50,6 +38,8 @@ def build_silver_orders():
     orders = pd.read_parquet(
         orders_file
     )
+    if orders["OrderID"].isna().any() or orders["OrderID"].duplicated().any():
+        raise ValueError("Orders snapshot has null or duplicate OrderID; refusing to publish Silver")
 
     customers = pd.read_parquet(
         CUSTOMER_SILVER_FILE,
@@ -162,10 +152,7 @@ def build_silver_orders():
         / "orders.parquet"
     )
 
-    orders.to_parquet(
-        output_file,
-        index=False
-    )
+    atomic_parquet_write(orders, output_file)
 
     print("Silver Orders transformation completed")
     print(f"Input rows       : {len(orders):,}")

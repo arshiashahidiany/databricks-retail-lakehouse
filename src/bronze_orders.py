@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
+from orders_io import latest_snapshot, atomic_parquet_write
 
 
 LANDING_DIR = Path(
@@ -13,20 +14,7 @@ BRONZE_DIR = Path(
 
 
 def latest_landing_file():
-
-    files = list(
-        LANDING_DIR.glob("orders_*.parquet")
-    )
-
-    if not files:
-        raise FileNotFoundError(
-            "No SQL Server Orders files found in landing."
-        )
-
-    return max(
-        files,
-        key=lambda file: file.stat().st_mtime
-    )
+    return latest_snapshot(LANDING_DIR, "orders")
 
 
 def process_to_bronze():
@@ -54,10 +42,7 @@ def process_to_bronze():
         / landing_file.name
     )
 
-    df.to_parquet(
-        output_file,
-        index=False
-    )
+    atomic_parquet_write(df, output_file)
 
     print("Orders Bronze transformation completed")
     print(f"Input : {landing_file}")

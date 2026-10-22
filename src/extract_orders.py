@@ -2,6 +2,7 @@ import pyodbc
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
+from orders_io import atomic_parquet_write
 
 
 SERVER = "DESKTOP-H3LQUJ9"
@@ -48,7 +49,7 @@ def extract_orders():
     )
 
     timestamp = datetime.now().strftime(
-        "%Y%m%d_%H%M%S"
+        "%Y%m%d_%H%M%S_%f"
     )
 
     output_file = (
@@ -56,10 +57,7 @@ def extract_orders():
         / f"orders_{timestamp}.parquet"
     )
 
-    df.to_parquet(
-        output_file,
-        index=False
-    )
+    atomic_parquet_write(df, output_file)
 
     print("SQL Server Orders extraction completed")
     print(f"Source : {SERVER}/{DATABASE}")
