@@ -64,6 +64,7 @@ def extract_orders():
     print("Table  : Orders")
     print(f"Output : {output_file}")
     print(f"Rows   : {len(df):,}")
+    return output_file
 
 
 if __name__ == "__main__":

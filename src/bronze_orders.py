@@ -17,9 +17,9 @@ def latest_landing_file():
     return latest_snapshot(LANDING_DIR, "orders")
 
 
-def process_to_bronze():
+def process_to_bronze(landing_file=None):
 
-    landing_file = latest_landing_file()
+    landing_file = Path(landing_file) if landing_file is not None else latest_landing_file()
 
     df = pd.read_parquet(
         landing_file
@@ -48,6 +48,7 @@ def process_to_bronze():
     print(f"Input : {landing_file}")
     print(f"Output: {output_file}")
     print(f"Rows  : {len(df):,}")
+    return output_file
 
 
 if __name__ == "__main__":

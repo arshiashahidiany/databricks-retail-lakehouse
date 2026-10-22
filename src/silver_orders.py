@@ -31,9 +31,9 @@ def latest_bronze_file():
     return latest_snapshot(BRONZE_DIR, "orders")
 
 
-def build_silver_orders():
+def build_silver_orders(orders_file=None):
 
-    orders_file = latest_bronze_file()
+    orders_file = Path(orders_file) if orders_file is not None else latest_bronze_file()
 
     orders = pd.read_parquet(
         orders_file
@@ -177,6 +177,7 @@ def build_silver_orders():
         f"{(~orders['status_valid']).sum():,}"
     )
     print(f"Output           : {output_file}")
+    return output_file
 
 
 if __name__ == "__main__":
