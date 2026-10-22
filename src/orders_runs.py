@@ -4,6 +4,7 @@ Single-machine prototype only; database writes and dataset publication are NOT
 one atomic transaction. An interrupted stage may be safely re-run.
 """
 import sqlite3
+import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -26,9 +27,13 @@ def connect(db=DEFAULT_DB):
     conn.execute("""CREATE TABLE IF NOT EXISTS orders_stages (
         run_id TEXT NOT NULL, stage TEXT NOT NULL, status TEXT NOT NULL,
         input_path TEXT, output_path TEXT, row_count INTEGER,
-        updated_at TEXT NOT NULL, error TEXT,
+        updated_at TEXT NOT NULL, error TEXT, output_sha256 TEXT,
         PRIMARY KEY (run_id, stage),
         FOREIGN KEY (run_id) REFERENCES orders_runs(run_id))""")
+    # Backward-compatible upgrade for the Stage 3B SQLite file.
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(orders_stages)")}
+    if "output_sha256" not in existing:
+        conn.execute("ALTER TABLE orders_stages ADD COLUMN output_sha256 TEXT")
     conn.commit()
     return conn
 
@@ -41,21 +46,30 @@ def create_run(conn, run_id):
 
 
 def stage(conn, run_id, name):
-    return conn.execute("SELECT status, input_path, output_path, row_count FROM orders_stages WHERE run_id=? AND stage=?",
+    return conn.execute("SELECT status, input_path, output_path, row_count, output_sha256 FROM orders_stages WHERE run_id=? AND stage=?",
                         (run_id, name)).fetchone()
 
 
-def record_stage(conn, run_id, name, status, input_path=None, output_path=None, row_count=None, error=None):
+def file_sha256(path):
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def record_stage(conn, run_id, name, status, input_path=None, output_path=None, row_count=None, error=None, output_sha256=None):
     now = utc_now()
     conn.execute("""INSERT INTO orders_stages
-        (run_id,stage,status,input_path,output_path,row_count,updated_at,error)
-        VALUES (?,?,?,?,?,?,?,?)
+        (run_id,stage,status,input_path,output_path,row_count,updated_at,error,output_sha256)
+        VALUES (?,?,?,?,?,?,?,?,?)
         ON CONFLICT(run_id,stage) DO UPDATE SET
         status=excluded.status, input_path=excluded.input_path,
         output_path=excluded.output_path, row_count=excluded.row_count,
-        updated_at=excluded.updated_at, error=excluded.error""",
+        updated_at=excluded.updated_at, error=excluded.error,
+        output_sha256=excluded.output_sha256""",
         (run_id, name, status, str(input_path) if input_path else None,
-         str(output_path) if output_path else None, row_count, now, error))
+         str(output_path) if output_path else None, row_count, now, error, output_sha256))
     conn.commit()
 
 
