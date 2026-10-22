@@ -1,7 +1,7 @@
-"""Generate synthetic customer JSON test data. This fixture helps exercise ingestion and identity resolution without relying exclusively on the OLTP database."""
+"""Generate synthetic customer JSON for local testing. This is not production data."""
 
-# TEST FIXTURES: Synthetic data gives us reproducible input for the pipeline;
-# it must not be mistaken for a representative production distribution.
+# This data is for repeatable testing.
+# Do not treat it as a real production distribution.
 
 import json
 import random

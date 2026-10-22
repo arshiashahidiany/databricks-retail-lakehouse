@@ -1,8 +1,7 @@
-"""Read an Orders snapshot from SQL Server into local landing storage. This is a full extraction, not CDC; review source load before using it on large production tables."""
+"""Pull a full Orders snapshot into landing storage. This is not CDC and it rereads the current table each run."""
 
-# SOURCE CONTRACT: This query produces a full current-state Orders snapshot,
-# not a bounded CDC event window. Running it repeatedly rereads historical rows.
-# Stage 4B will introduce a separate database change-feed extraction path.
+# This is a full snapshot, not a bounded CDC feed.
+# A later stage will add a proper change-feed path.
 
 import pyodbc
 import pandas as pd

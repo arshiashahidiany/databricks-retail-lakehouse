@@ -1,7 +1,7 @@
-"""Convert the pinned Orders landing snapshot to Bronze Parquet. The orchestrator passes an exact input path so a retry does not silently select a different extract."""
+"""Load the selected Orders snapshot into Bronze. The run manager passes the exact input file, so retries do not silently switch to a newer extract."""
 
-# BRONZE CONTRACT: Keep the exact source extract selected by the run coordinator.
-# A run retry should never independently discover a newer Orders file.
+# Keep the input file fixed for a retry.
+# Do not pick a newer Orders snapshot just because it arrived later.
 
 from pathlib import Path
 

@@ -1,7 +1,7 @@
-"""Shared file operations for the snapshot-based Orders pipeline."""
+"""Shared file helpers for the Orders snapshot pipeline."""
 
-# FILE SAFETY: Temporary write + replace protects a single local output file;
-# it does not atomically commit the data file and the SQLite run registry.
+# Safe file writes protect one artifact at a time.
+# They do not make the data write and SQLite state update a single transaction.
 from pathlib import Path
 import os
 import uuid

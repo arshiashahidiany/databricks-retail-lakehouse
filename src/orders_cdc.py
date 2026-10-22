@@ -1,31 +1,17 @@
-"""Apply SQL Server-style CDC events to an Orders *current-state* table.
+"""Apply CDC-style events to the current Orders state.
 
-Stage 4A is an offline exercise, not a live SQL Server CDC connector.
-
-Expected event fields:
-    OrderID, operation (I/U/D), change_lsn, seqval, and the Order fields.
-
-Positions are 20-character hexadecimal strings; the pair (change_lsn, seqval)
-orders events for a given order. In real SQL Server CDC, the mapping from
-__$operation and __$start_lsn / __$seqval must be handled by the extractor.
-
-Why retain the latest CDC position AND delete tombstones?
-    If a delayed old update arrives after a delete, we must not resurrect the
-    deleted order. Keeping both the tombstone and its position prevents that.
-
-This module calculates the next state. It does NOT guarantee that publishing
-state and committing a CDC offset happen atomically; that is later work.
+This is a local reducer, not a live SQL Server CDC connector.
+It keeps the last seen position and delete tombstones so late events cannot revive a deleted order.
 """
 
-# CDC CONTRACT: Ordering, duplicate handling and deletion markers matter
-# independently of whether changes arrive by file, batch query or stream.
+# Event ordering, deduping, and delete markers still matter whether the input is a file, a batch, or a stream.
 
 from pathlib import Path
 
 import pandas as pd
 
-# Fields representing an Order's current business values. Insert/update
-# events must contain complete after-images for these fields.
+# These are the current business fields for an order.
+# Insert and update events must include a full after-image for all of them.
 FIELDS = ["CustomerID", "OrderDate", "OrderStatus", "TotalAmount"]
 KEYS = ["OrderID", "change_lsn", "seqval"]
 LSN_LENGTH = 20
@@ -64,8 +50,8 @@ def apply_changes(state: pd.DataFrame, events: pd.DataFrame) -> pd.DataFrame:
 
     state_columns = ["OrderID", *FIELDS, "is_deleted", "change_lsn", "seqval"]
 
-    # Build an OrderID -> last-known-state map. An empty state represents the
-    # first ingestion; any existing state must already obey our key contract.
+    # Build an OrderID -> last-known-state map.
+    # An empty state means first load; any existing state must already match the key contract.
     if state.empty:
         existing = {}
     else:
@@ -78,9 +64,9 @@ def apply_changes(state: pd.DataFrame, events: pd.DataFrame) -> pd.DataFrame:
             r["change_lsn"] = _validate_position(r["change_lsn"], "state.change_lsn")
             r["seqval"] = _validate_position(r["seqval"], "state.seqval")
 
-    # Validate and standardise incoming events BEFORE applying any of them.
-    # We accept only after-image I/U rows and D rows; e.g. SQL Server CDC
-    # update-before images must be removed/mapped by the upstream extractor.
+    # Validate and normalize incoming events before applying them.
+    # We only accept full I/U after-images and D rows.
+    # Update-before images should be removed or mapped upstream.
     normalized = []
     for _, row in events.iterrows():
         if pd.isna(row["OrderID"]) or isinstance(row["OrderID"], bool):
@@ -100,9 +86,8 @@ def apply_changes(state: pd.DataFrame, events: pd.DataFrame) -> pd.DataFrame:
         )
         normalized.append(r)
 
-    # A source connector may redeliver the same event after a retry. Drop
-    # identical redeliveries; a different payload at the same position is a
-    # data-contract violation rather than a legitimate subsequent change.
+    # Retries can deliver the same event twice.
+    # Ignore identical duplicates; a different payload at the same position is a contract violation.
     seen = {}
     for r in normalized:
         identity = (r["OrderID"], r["change_lsn"], r["seqval"])
@@ -115,9 +100,8 @@ def apply_changes(state: pd.DataFrame, events: pd.DataFrame) -> pd.DataFrame:
         else:
             seen[identity] = r
 
-    # Apply in source position order, not delivery/file order. A previously
-    # processed position (<= current one) is skipped, which makes retries
-    # idempotent and handles late redelivery of older events.
+    # Apply rows in source order, not file order.
+    # If a position is already processed, skip it. This keeps retries idempotent.
     for r in sorted(seen.values(), key=lambda r: (r["change_lsn"], r["seqval"], r["OrderID"])):
         key = r["OrderID"]
         previous = existing.get(key)
@@ -126,13 +110,12 @@ def apply_changes(state: pd.DataFrame, events: pd.DataFrame) -> pd.DataFrame:
             continue
 
         if r["operation"] == "D":
-            # We do NOT remove a deleted Order from persisted state. Keeping
-            # the tombstone and its latest position prevents a stale INSERT
-            # or UPDATE from bringing that Order back.
+            # Keep the deleted order in state as a tombstone.
+            # That stops a stale insert or update from resurrecting it.
             values = {f: previous.get(f) if previous else None for f in FIELDS}
         else:
-            # This reducer requires full after-images, not sparse patches.
-            # Otherwise an UPDATE could accidentally blank unchanged fields.
+            # This reducer needs a full after-image, not a partial patch.
+            # Otherwise an update can blank fields that were not meant to change.
             if any(pd.isna(r[f]) for f in FIELDS):
                 raise ValueError(f"Incomplete CDC after-image for OrderID={key}")
             values = {f: r[f] for f in FIELDS}
@@ -145,8 +128,7 @@ def apply_changes(state: pd.DataFrame, events: pd.DataFrame) -> pd.DataFrame:
             "seqval": position[1],
         }
 
-    # Consistent column and row ordering makes tests and repeated executions
-    # deterministic (even when the event batch arrives in a different order).
+    # Keep the output order stable so tests and repeated runs are deterministic.
     return pd.DataFrame([existing[k] for k in sorted(existing)], columns=state_columns)
 
 
@@ -178,9 +160,8 @@ def run_demo(events_file: Path, state_file: Path, output_file: Path):
     )
     next_state = apply_changes(state, events)
 
-    # A safe per-file replacement prevents an interrupted Parquet write from
-    # overwriting a valid prior file. It does NOT atomically commit a CDC offset
-    # together with the data: Stage 4B+ must implement that guarantee.
+    # Replace the output file safely so a partial write does not wipe a valid file.
+    # This still does not atomically commit the CDC offset with the state change.
     from orders_io import atomic_parquet_write
 
     atomic_parquet_write(next_state, output_file)

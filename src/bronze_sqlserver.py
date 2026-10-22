@@ -1,7 +1,7 @@
-"""Convert the most recent landed SQL Server customer snapshot to Bronze. Selection is currently file-based and does not implement incremental CDC."""
+"""Load the newest landed SQL Server customer snapshot into Bronze. This is file-based and not true CDC."""
 
-# CURRENT LIMITATION: Newest-by-modification-time can select a copied older
-# snapshot. Replace with source extract IDs / run manifests for reliable replay.
+# Newest-by-time can pick an older copied file.
+# Use an extract ID or run manifest for reliable replay.
 
 from datetime import datetime, timezone
 from pathlib import Path

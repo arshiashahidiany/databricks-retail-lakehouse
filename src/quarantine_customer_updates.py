@@ -1,7 +1,7 @@
-"""Identify customer updates that cannot be confidently mapped to a source customer and route those records to quarantine for investigation."""
+"""Send customer updates that cannot be matched to quarantine for review."""
 
-# QUARANTINE PURPOSE: Keep unmapped source updates traceable and recoverable;
-# dropping them would hide a potentially systematic data-quality issue.
+# Keep unmatched updates traceable.
+# Dropping them hides a possible data quality problem.
 
 from pathlib import Path
 

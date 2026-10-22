@@ -1,11 +1,11 @@
-"""Local SQLite run registry for the snapshot Orders pipeline.
+"""SQLite run state for the local Orders snapshot pipeline.
 
-Single-machine prototype only; database writes and dataset publication are NOT
-one atomic transaction. An interrupted stage may be safely re-run.
+This is a single-machine prototype. The database write and the output write are not one transaction.
+A failed or interrupted stage can be retried.
 """
 
-# OPERATIONAL STATE: The stage table records the output artifact checksum.
-# A prior SUCCEEDED status is insufficient unless the file still matches.
+# Track the output checksum for each stage.
+# A status of SUCCEEDED is only valid if the file still matches that checksum.
 import sqlite3
 import hashlib
 from datetime import datetime, timezone

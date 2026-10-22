@@ -1,1 +1,1 @@
-"""Placeholder reserved for customer identity map creation. There is no executable implementation in this module yet."""
+"""Placeholder for customer identity map work. No implementation here yet."""

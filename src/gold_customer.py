@@ -1,7 +1,6 @@
-"""Build a customer-facing Gold dataset from the conformed Silver customer table. Gold provides consumption-ready attributes rather than preserving raw event history."""
+"""Build the customer-facing Gold view from the conformed Silver data. This is for consumers, not raw lineage."""
 
-# GOLD PURPOSE: This output is optimized for consumers, not raw lineage.
-# Keep source-facing identifiers available to make aggregates auditable.
+# Keep the source identifiers around so downstream aggregates stay auditable.
 
 from pathlib import Path
 

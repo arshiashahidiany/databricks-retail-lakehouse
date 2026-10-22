@@ -1,4 +1,4 @@
-"""Local connectivity smoke test for SQL Server; do not store database passwords in version control."""
+"""Quick SQL Server connectivity check. Do not check credentials into source control."""
 
 import pyodbc
 

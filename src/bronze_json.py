@@ -1,7 +1,6 @@
-"""Convert a landed JSON customer extract to the Bronze Parquet format. Bronze should retain source attributes and the metadata needed to trace a record back to its incoming file. This prototype selects one landing file, not a stream of incremental events."""
+"""Load the landed JSON customer extract into Bronze Parquet. Keep the source fields and file metadata so rows can be traced back to the input file."""
 
-# CURRENT LIMITATION: This file-level Bronze flow does not independently
-# guarantee exactly-once processing when sources resend a JSON extract.
+# This is a single-file Bronze load. It does not guarantee exactly-once handling if the source resends the same extract.
 
 import json
 from datetime import datetime, timezone

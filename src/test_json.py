@@ -1,4 +1,4 @@
-"""Local smoke-test utility for inspecting generated JSON content. This is not a production data-quality test suite."""
+"""Quick check for the generated JSON. Not a production quality test."""
 
 import json
 

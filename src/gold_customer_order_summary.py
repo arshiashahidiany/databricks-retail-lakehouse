@@ -1,7 +1,7 @@
-"""Aggregate Silver orders into customer-level metrics. Check the aggregation grain and treatment of cancelled, returned, and invalid records before using metrics for financial reporting."""
+"""Aggregate order data to the customer level. Check the grain and the revenue rules before using this for finance."""
 
-# METRIC CONTRACT: Decide whether cancelled/returned orders contribute to
-# revenue and document the rule before treating this as reconciled finance.
+# Decide whether cancelled or returned orders count toward revenue.
+# Document that rule before treating this as finance-grade data.
 
 from pathlib import Path
 
@@ -77,7 +77,7 @@ def build_customer_order_summary():
         .reset_index()
     )
 
-    # Status-specific counts
+    # Status counts
 
     status_counts = (
         pd.crosstab(
@@ -119,7 +119,7 @@ def build_customer_order_summary():
         )
     )
 
-    # Join everything back to Customer
+    # Join the metrics back to the customer base
 
     result = customers.merge(
         order_summary,

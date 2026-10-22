@@ -1,7 +1,7 @@
-"""Standardize and merge SQL Server customer snapshots with identity-resolved JSON updates. The current local implementation is snapshot-oriented, not an SCD Type 2 history table."""
+"""Merge SQL Server customer snapshots with resolved JSON updates. This is current-state logic, not Type 2 history."""
 
-# CUSTOMER HISTORY: This is a current-state merge, not a Type 2 dimension.
-# Historical address correctness requires effective-dated versions later.
+# This is a current-state merge, not a Type 2 dimension.
+# Address history needs effective dating later.
 
 from pathlib import Path
 
@@ -128,7 +128,7 @@ def build_silver():
         IDENTITY_FILE
     )
 
-    # Keep only successfully resolved JSON updates
+    # Keep only resolved JSON updates
 
     identity_df = identity_df[
         identity_df["canonical_customer_id"]
@@ -151,7 +151,7 @@ def build_silver():
         how="inner",
     )
 
-    # SQL Server becomes the base dataset
+    # Start from the SQL Server base dataset
 
     sql_df = sql_df.rename(
         columns={
@@ -172,7 +172,7 @@ def build_silver():
         "customer_id"
     )
 
-    # Apply resolved JSON updates
+    # Apply the resolved JSON updates
 
     for row in json_df.itertuples():
 
@@ -242,7 +242,7 @@ def build_silver():
                     "updated_at"
                 ] = row.updated_at
 
-    # Data standardization
+    # Standardize the datatypes and values
 
     sql_df["email"] = normalize_email(
         sql_df["email"]
@@ -262,7 +262,7 @@ def build_silver():
         standardize_province
     )
 
-    # Data-quality flags
+    # Data quality flags
 
     sql_df["email_valid"] = (
         sql_df["email"]

@@ -1,7 +1,6 @@
-"""Copy external customer JSON files into the local landing area. Landing is the hand-off boundary between an incoming source file and processing."""
+"""Copy the source JSON into landing so the raw file is kept for processing."""
 
-# LANDING CONTRACT: Source files should be preserved so parsing and identity
-# resolution can be repeated without requesting the original file again.
+# Keep the source file around so we can re-run parsing and identity resolution without asking for it again.
 
 import shutil
 from datetime import datetime

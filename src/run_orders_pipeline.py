@@ -6,8 +6,8 @@ Usage: python src/run_orders_pipeline.py
 Run from the repository root. Avoid running two copies concurrently.
 """
 
-# RECOVERY CONTRACT: All stages in one run must share pinned artifacts.
-# The orchestrator validates stored hashes before skipping completed work.
+# All stages in a run must point to the same pinned artifacts.
+# The orchestrator checks stored hashes before skipping a completed stage.
 import argparse
 import uuid
 from pathlib import Path
@@ -31,7 +31,7 @@ def run_pipeline(run_id=None, db=None, extract_fn=None,
         if not existing:
             create_run(conn, run_id)
         elif existing[0] == "SUCCEEDED":
-            # An already completed run must still point to the same published artifacts.
+            # A completed run must still point to the same published artifacts.
             for completed_stage in ("extract", "bronze", "silver"):
                 result = stage(conn, run_id, completed_stage)
                 if not result or not result[4] or not Path(result[2]).is_file() or file_sha256(result[2]) != result[4]:
@@ -46,7 +46,7 @@ def run_pipeline(run_id=None, db=None, extract_fn=None,
                            ("bronze", bronze_fn), ("silver", silver_fn)):
             old = stage(conn, run_id, name)
             if old and old[0] == "SUCCEEDED" and old[2] and Path(old[2]).exists():
-                # Never silently reuse changed or replaced outputs from a previous attempt.
+                # Do not silently reuse outputs that changed or were replaced.
                 if not old[4] or file_sha256(old[2]) != old[4]:
                     raise RuntimeError(f"Cannot resume {run_id}: {name} output changed or lacks a checksum")
                 previous_output = Path(old[2])

@@ -1,7 +1,7 @@
-"""Resolve customer records from the JSON feed against SQL Server customer identities. Matching is heuristic; ambiguous identities must not be silently treated as certain."""
+"""Match JSON customer rows to SQL Server customers. This is heuristic, and ambiguous matches should be flagged instead of accepted silently."""
 
-# IDENTITY RESOLUTION: Email/phone/name are matching signals rather than
-# guaranteed immutable keys. Ambiguous matches should be held for review.
+# Email, phone, and name are matching signals, not immutable keys.
+# Ambiguous matches should be reviewed.
 
 from pathlib import Path
 
@@ -98,7 +98,7 @@ def resolve_identity():
         json_file
     )
 
-    # Normalize identifiers
+    # Normalize the match keys
 
     sql_df["match_email"] = normalize_email(
         sql_df["Email"]

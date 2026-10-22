@@ -1,8 +1,7 @@
-"""Validate and conform an Orders Bronze snapshot into the current Silver Orders dataset. Invalid business values are flagged and snapshot uniqueness is enforced before publishing."""
+"""Validate a Bronze Orders snapshot and publish the current Silver dataset. Invalid rows are flagged and duplicate OrderIDs are rejected."""
 
-# SILVER GRAIN: Expect at most one row per OrderID in a full snapshot.
-# A CDC event feed may have multiple rows per OrderID and requires reduction
-# before enforcing this current-state uniqueness rule.
+# A full snapshot should have one row per OrderID.
+# A CDC feed can have multiple rows per OrderID, so it must be reduced before this check.
 
 from pathlib import Path
 
@@ -54,7 +53,7 @@ def build_silver_orders(orders_file=None):
         columns=["customer_id"]
     )
 
-    # Standardize types
+    # Standardize field types
 
     orders["OrderID"] = pd.to_numeric(
         orders["OrderID"],
@@ -108,7 +107,7 @@ def build_silver_orders(orders_file=None):
         )
     )
 
-    # Referential integrity against Silver Customer
+    # Check customer references against the Silver customer data
 
     valid_customer_ids = set(
         customers["customer_id"]

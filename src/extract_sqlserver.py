@@ -1,7 +1,6 @@
-"""Extract the SQL Server Customers table to a timestamped landing dataset. The result represents a snapshot of the query, not the full history of customer changes."""
+"""Pull the current Customers table into a timestamped landing file. This is a snapshot, not full historical change tracking."""
 
-# SOURCE CONTRACT: Extracted customer rows are snapshots; a hard delete may be
-# invisible without comparison to prior snapshots or a source change log.
+# A hard delete can be invisible unless we compare against earlier snapshots or a source change log.
 
 import pyodbc
 import pandas as pd
