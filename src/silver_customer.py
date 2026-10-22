@@ -1,3 +1,8 @@
+"""Standardize and merge SQL Server customer snapshots with identity-resolved JSON updates. The current local implementation is snapshot-oriented, not an SCD Type 2 history table."""
+
+# CUSTOMER HISTORY: This is a current-state merge, not a Type 2 dimension.
+# Historical address correctness requires effective-dated versions later.
+
 from pathlib import Path
 
 import pandas as pd
@@ -22,6 +27,7 @@ OUTPUT_DIR = Path(
 
 def latest_file(directory, pattern):
 
+    """Locate the newest matching snapshot by filesystem timestamp. This does not guarantee the newest logical source version when files are copied or restored."""
     files = list(directory.glob(pattern))
 
     if not files:
@@ -37,6 +43,7 @@ def latest_file(directory, pattern):
 
 def normalize_email(series):
 
+    """Trim and lowercase email identifiers before matching. Normalization does not imply email addresses are unique customer identifiers."""
     return (
         series
         .astype("string")
@@ -47,6 +54,7 @@ def normalize_email(series):
 
 def normalize_phone(series):
 
+    """Standardize phone values for comparison; absent or malformed numbers must remain distinguishable from valid identifiers."""
     return (
         series
         .astype("string")
@@ -56,6 +64,7 @@ def normalize_phone(series):
 
 def normalize_city(series):
 
+    """Trim and standardize city capitalization for downstream consistency."""
     return (
         series
         .astype("string")
@@ -66,6 +75,7 @@ def normalize_city(series):
 
 def standardize_province(value):
 
+    """Expand recognized Canadian province or territory abbreviations; leave unrecognized values unchanged for subsequent validation."""
     if pd.isna(value):
         return value
 
@@ -95,6 +105,7 @@ def standardize_province(value):
 
 def build_silver():
 
+    """Create the current Silver customer view from snapshots and resolved updates. Inspect source freshness and identity confidence before treating it as authoritative."""
     sql_file = latest_file(
         SQL_BRONZE_DIR,
         "customers_*.parquet"

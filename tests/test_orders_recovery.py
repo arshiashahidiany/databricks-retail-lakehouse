@@ -13,23 +13,27 @@ from orders_runs import connect
 
 
 def simulated_pipeline(tmp_path, monkeypatch):
+    """Support this module's processing or test workflow; inspect callers for the expected input and output contract."""
     monkeypatch.setattr(pd, 'read_parquet', pd.read_pickle)
     events = {'extract': 0, 'bronze': 0, 'silver': 0}
     landing, bronze, silver = [tmp_path / f'{x}.parquet' for x in ('landing', 'bronze', 'silver')]
     failure = {'silver': False}
 
     def extract():
+        """Simulate this stage without connecting to external data sources; used to test run-state transitions."""
         events['extract'] += 1
         pd.DataFrame({'OrderID': [1, 2]}).to_pickle(landing)
         return landing
 
     def to_bronze(source):
+        """Simulate this stage without connecting to external data sources; used to test run-state transitions."""
         events['bronze'] += 1
         assert source == landing
         pd.read_pickle(source).to_pickle(bronze)
         return bronze
 
     def to_silver(source):
+        """Simulate this stage without connecting to external data sources; used to test run-state transitions."""
         events['silver'] += 1
         assert source == bronze
         if failure['silver']:
@@ -41,6 +45,7 @@ def simulated_pipeline(tmp_path, monkeypatch):
 
 
 def test_failure_then_resume_skips_completed_stages(tmp_path, monkeypatch):
+    """After a simulated stage failure, resume without rerunning earlier successful stages."""
     funcs, calls, failure, paths = simulated_pipeline(tmp_path, monkeypatch)
     db = tmp_path / 'tracking.sqlite'
     failure['silver'] = True
@@ -59,6 +64,7 @@ def test_failure_then_resume_skips_completed_stages(tmp_path, monkeypatch):
 
 
 def test_resume_rejects_tampered_bronze(tmp_path, monkeypatch):
+    """Reject resuming from a Bronze output changed after its checksum was recorded."""
     funcs, calls, failure, paths = simulated_pipeline(tmp_path, monkeypatch)
     db = tmp_path / 'tracking.sqlite'
     failure['silver'] = True
@@ -72,6 +78,7 @@ def test_resume_rejects_tampered_bronze(tmp_path, monkeypatch):
 
 
 def test_completed_run_rejects_replaced_silver(tmp_path, monkeypatch):
+    """Detect output replacement even when the run was previously complete."""
     funcs, calls, failure, paths = simulated_pipeline(tmp_path, monkeypatch)
     db = tmp_path / 'tracking.sqlite'
     run_pipeline('done-1', db, *funcs)
@@ -81,6 +88,7 @@ def test_completed_run_rejects_replaced_silver(tmp_path, monkeypatch):
 
 
 def test_db_schema_upgrades_existing_stage3b_database(tmp_path):
+    """Confirm existing run registries gain checksum support without losing their run records."""
     path = tmp_path / 'legacy.sqlite'
     with sqlite3.connect(path) as con:
         con.execute('''CREATE TABLE orders_stages (
@@ -94,10 +102,12 @@ def test_db_schema_upgrades_existing_stage3b_database(tmp_path):
 
 
 def test_failed_atomic_write_preserves_previous_snapshot(tmp_path, monkeypatch):
+    """An interrupted write must not destroy the previous published snapshot."""
     target = tmp_path / 'orders.parquet'
     target.write_bytes(b'known-good-snapshot')
 
     def interrupted_write(self, path, index=False):
+        """Support this module's processing or test workflow; inspect callers for the expected input and output contract."""
         Path(path).write_bytes(b'incomplete')
         raise OSError('disk full')
 

@@ -1,3 +1,8 @@
+"""Convert the most recent landed SQL Server customer snapshot to Bronze. Selection is currently file-based and does not implement incremental CDC."""
+
+# CURRENT LIMITATION: Newest-by-modification-time can select a copied older
+# snapshot. Replace with source extract IDs / run manifests for reliable replay.
+
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -15,6 +20,7 @@ BRONZE_DIR = Path(
 
 def get_latest_landing_file():
 
+    """Find the newest landed file matching the expected source pattern. The current policy assumes landing filenames and arrival order are trustworthy."""
     files = list(
         LANDING_DIR.glob("customers_*.parquet")
     )
@@ -32,6 +38,7 @@ def get_latest_landing_file():
 
 def process_to_bronze():
 
+    """Read the chosen landing extract, add Bronze ingestion context where implemented, and publish a Parquet snapshot."""
     landing_file = get_latest_landing_file()
 
     df = pd.read_parquet(

@@ -1,3 +1,5 @@
+"""Automated regression tests for RetailCo ingestion and recovery. Tests use isolated fixtures where possible instead of a live SQL Server database."""
+
 from pathlib import Path
 import sys
 import sqlite3
@@ -10,6 +12,7 @@ from run_orders_pipeline import run_pipeline
 
 def test_pinned_snapshot_and_resume(tmp_path, monkeypatch):
     # Exercise runner semantics without requiring optional Parquet dependencies.
+    """Check that stage inputs remain pinned to the original extraction across retries."""
     monkeypatch.setattr(pd, "read_parquet", pd.read_pickle)
     db = tmp_path / "runs.sqlite"
     a = tmp_path / "a.parquet"
@@ -19,17 +22,20 @@ def test_pinned_snapshot_and_resume(tmp_path, monkeypatch):
     fail = {"once": True}
 
     def extract():
+        """Simulate this stage without connecting to external data sources; used to test run-state transitions."""
         calls["extract"] += 1
         pd.DataFrame({"OrderID": [1]}).to_pickle(a)
         return a
 
     def bronze(input_path):
+        """Simulate this stage without connecting to external data sources; used to test run-state transitions."""
         calls["bronze"] += 1
         assert input_path == a
         pd.read_parquet(input_path).to_pickle(b)
         return b
 
     def silver(input_path):
+        """Simulate this stage without connecting to external data sources; used to test run-state transitions."""
         calls["silver"] += 1
         assert input_path == b
         if fail["once"]:

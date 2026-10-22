@@ -1,3 +1,8 @@
+"""Convert a landed JSON customer extract to the Bronze Parquet format. Bronze should retain source attributes and the metadata needed to trace a record back to its incoming file. This prototype selects one landing file, not a stream of incremental events."""
+
+# CURRENT LIMITATION: This file-level Bronze flow does not independently
+# guarantee exactly-once processing when sources resend a JSON extract.
+
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,6 +15,7 @@ BRONZE_DIR = Path("data/bronze/customer")
 
 
 def get_latest_landing_file():
+    """Find the newest landed file matching the expected source pattern. The current policy assumes landing filenames and arrival order are trustworthy."""
     files = list(LANDING_DIR.glob("customer_updates_*.json"))
 
     if not files:
@@ -22,6 +28,7 @@ def get_latest_landing_file():
 
 def process_to_bronze():
 
+    """Read the chosen landing extract, add Bronze ingestion context where implemented, and publish a Parquet snapshot."""
     landing_file = get_latest_landing_file()
 
     with open(landing_file, "r", encoding="utf-8") as f:

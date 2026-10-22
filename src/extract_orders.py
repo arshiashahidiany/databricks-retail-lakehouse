@@ -1,3 +1,9 @@
+"""Read an Orders snapshot from SQL Server into local landing storage. This is a full extraction, not CDC; review source load before using it on large production tables."""
+
+# SOURCE CONTRACT: This query produces a full current-state Orders snapshot,
+# not a bounded CDC event window. Running it repeatedly rereads historical rows.
+# Stage 4B will introduce a separate database change-feed extraction path.
+
 import pyodbc
 import pandas as pd
 from datetime import datetime
@@ -24,6 +30,7 @@ LANDING_DIR = Path(
 
 def extract_orders():
 
+    """Query SQL Server Orders and land one extraction snapshot. This function does not track incremental offsets or deletions."""
     query = """
         SELECT
             OrderID,

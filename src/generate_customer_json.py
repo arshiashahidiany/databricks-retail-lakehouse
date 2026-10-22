@@ -1,3 +1,8 @@
+"""Generate synthetic customer JSON test data. This fixture helps exercise ingestion and identity resolution without relying exclusively on the OLTP database."""
+
+# TEST FIXTURES: Synthetic data gives us reproducible input for the pipeline;
+# it must not be mistaken for a representative production distribution.
+
 import json
 import random
 from datetime import datetime, timedelta

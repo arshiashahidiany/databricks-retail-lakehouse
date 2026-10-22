@@ -5,6 +5,9 @@ Usage: python src/run_orders_pipeline.py
 
 Run from the repository root. Avoid running two copies concurrently.
 """
+
+# RECOVERY CONTRACT: All stages in one run must share pinned artifacts.
+# The orchestrator validates stored hashes before skipping completed work.
 import argparse
 import uuid
 from pathlib import Path
@@ -17,6 +20,7 @@ from silver_orders import build_silver_orders
 
 def run_pipeline(run_id=None, db=None, extract_fn=None,
                  bronze_fn=process_to_bronze, silver_fn=build_silver_orders):
+    """Execute or resume extract → Bronze → Silver. Skip only outputs previously marked successful and still matching their saved checksum."""
     if extract_fn is None:
         from extract_orders import extract_orders
         extract_fn = extract_orders

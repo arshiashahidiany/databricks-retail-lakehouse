@@ -1,3 +1,8 @@
+"""Convert the pinned Orders landing snapshot to Bronze Parquet. The orchestrator passes an exact input path so a retry does not silently select a different extract."""
+
+# BRONZE CONTRACT: Keep the exact source extract selected by the run coordinator.
+# A run retry should never independently discover a newer Orders file.
+
 from pathlib import Path
 
 import pandas as pd
@@ -14,11 +19,13 @@ BRONZE_DIR = Path(
 
 
 def latest_landing_file():
+    """Find the most recent Orders landing snapshot using its snapshot identifier, rather than filesystem modification time."""
     return latest_snapshot(LANDING_DIR, "orders")
 
 
 def process_to_bronze(landing_file=None):
 
+    """Read the chosen landing extract, add Bronze ingestion context where implemented, and publish a Parquet snapshot."""
     landing_file = Path(landing_file) if landing_file is not None else latest_landing_file()
 
     df = pd.read_parquet(

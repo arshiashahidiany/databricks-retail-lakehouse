@@ -1,3 +1,8 @@
+"""Build a customer-facing Gold dataset from the conformed Silver customer table. Gold provides consumption-ready attributes rather than preserving raw event history."""
+
+# GOLD PURPOSE: This output is optimized for consumers, not raw lineage.
+# Keep source-facing identifiers available to make aggregates auditable.
+
 from pathlib import Path
 
 import pandas as pd
@@ -14,6 +19,7 @@ GOLD_DIR = Path(
 
 def build_customer_360():
 
+    """Publish a customer-level Gold view of available, standardized Silver attributes."""
     df = pd.read_parquet(SILVER_FILE)
 
     gold_columns = [

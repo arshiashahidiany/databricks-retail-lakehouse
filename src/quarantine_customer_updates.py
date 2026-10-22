@@ -1,3 +1,8 @@
+"""Identify customer updates that cannot be confidently mapped to a source customer and route those records to quarantine for investigation."""
+
+# QUARANTINE PURPOSE: Keep unmapped source updates traceable and recoverable;
+# dropping them would hide a potentially systematic data-quality issue.
+
 from pathlib import Path
 
 import pandas as pd
@@ -11,6 +16,7 @@ OUTPUT_DIR = Path("data/quarantine/customer")
 
 
 def latest_json_file():
+    """Find the most recent landed JSON extract to inspect for unresolved customers."""
     files = list(
         JSON_BRONZE_DIR.glob("customers_*.parquet")
     )
@@ -28,6 +34,7 @@ def latest_json_file():
 
 def quarantine_unmatched():
 
+    """Write unresolvable customer updates to quarantine rather than silently joining them to an incorrect customer."""
     json_file = latest_json_file()
 
     json_df = pd.read_parquet(json_file)

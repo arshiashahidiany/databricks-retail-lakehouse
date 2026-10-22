@@ -1,3 +1,8 @@
+"""Copy external customer JSON files into the local landing area. Landing is the hand-off boundary between an incoming source file and processing."""
+
+# LANDING CONTRACT: Source files should be preserved so parsing and identity
+# resolution can be repeated without requesting the original file again.
+
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -8,6 +13,7 @@ LANDING_DIR = Path("data/landing/json")
 
 
 def ingest_json():
+    """Stage incoming JSON source data in the landing directory while retaining the extract as a separate processing input."""
     if not SOURCE_FILE.exists():
         raise FileNotFoundError(
             f"Source file not found: {SOURCE_FILE}"

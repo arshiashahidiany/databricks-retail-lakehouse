@@ -3,6 +3,9 @@
 Single-machine prototype only; database writes and dataset publication are NOT
 one atomic transaction. An interrupted stage may be safely re-run.
 """
+
+# OPERATIONAL STATE: The stage table records the output artifact checksum.
+# A prior SUCCEEDED status is insufficient unless the file still matches.
 import sqlite3
 import hashlib
 from datetime import datetime, timezone
@@ -13,10 +16,12 @@ STAGES = ("extract", "bronze", "silver")
 
 
 def utc_now():
+    """Return an unambiguous UTC timestamp for operational records."""
     return datetime.now(timezone.utc).isoformat()
 
 
 def connect(db=DEFAULT_DB):
+    """Open the SQLite registry and create or migrate its control tables so existing Stage 3B databases remain readable."""
     db = Path(db)
     db.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db)
@@ -39,6 +44,7 @@ def connect(db=DEFAULT_DB):
 
 
 def create_run(conn, run_id):
+    """Register a new pipeline run before any extract or stage is executed."""
     now = utc_now()
     conn.execute("INSERT INTO orders_runs (run_id, status, created_at, updated_at) VALUES (?,?,?,?)",
                  (run_id, "RUNNING", now, now))
@@ -46,11 +52,13 @@ def create_run(conn, run_id):
 
 
 def stage(conn, run_id, name):
+    """Read the persisted status, file paths, row count and checksum for one stage of a run."""
     return conn.execute("SELECT status, input_path, output_path, row_count, output_sha256 FROM orders_stages WHERE run_id=? AND stage=?",
                         (run_id, name)).fetchone()
 
 
 def file_sha256(path):
+    """Hash the complete output file in bounded chunks so resumed runs can detect an overwritten or modified artifact."""
     digest = hashlib.sha256()
     with Path(path).open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -59,6 +67,7 @@ def file_sha256(path):
 
 
 def record_stage(conn, run_id, name, status, input_path=None, output_path=None, row_count=None, error=None, output_sha256=None):
+    """Upsert a stage result in SQLite. This database transaction is separate from the output-file write."""
     now = utc_now()
     conn.execute("""INSERT INTO orders_stages
         (run_id,stage,status,input_path,output_path,row_count,updated_at,error,output_sha256)
@@ -74,6 +83,7 @@ def record_stage(conn, run_id, name, status, input_path=None, output_path=None, 
 
 
 def set_run_status(conn, run_id, status, error=None):
+    """Persist the final or current overall status of a pipeline run."""
     conn.execute("UPDATE orders_runs SET status=?, updated_at=?, error=? WHERE run_id=?",
                  (status, utc_now(), error, run_id))
     conn.commit()

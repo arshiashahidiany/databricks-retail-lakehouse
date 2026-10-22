@@ -1,3 +1,9 @@
+"""Validate and conform an Orders Bronze snapshot into the current Silver Orders dataset. Invalid business values are flagged and snapshot uniqueness is enforced before publishing."""
+
+# SILVER GRAIN: Expect at most one row per OrderID in a full snapshot.
+# A CDC event feed may have multiple rows per OrderID and requires reduction
+# before enforcing this current-state uniqueness rule.
+
 from pathlib import Path
 
 import pandas as pd
@@ -28,11 +34,13 @@ VALID_STATUSES = {
 
 
 def latest_bronze_file():
+    """Resolve the latest Bronze Orders snapshot for standalone execution; orchestration should pass the exact pinned file instead."""
     return latest_snapshot(BRONZE_DIR, "orders")
 
 
 def build_silver_orders(orders_file=None):
 
+    """Validate the selected Bronze Orders snapshot, enrich it with customer integrity checks, and publish the resulting Silver dataset."""
     orders_file = Path(orders_file) if orders_file is not None else latest_bronze_file()
 
     orders = pd.read_parquet(

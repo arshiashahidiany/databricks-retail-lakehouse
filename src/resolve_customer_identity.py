@@ -1,3 +1,8 @@
+"""Resolve customer records from the JSON feed against SQL Server customer identities. Matching is heuristic; ambiguous identities must not be silently treated as certain."""
+
+# IDENTITY RESOLUTION: Email/phone/name are matching signals rather than
+# guaranteed immutable keys. Ambiguous matches should be held for review.
+
 from pathlib import Path
 
 import pandas as pd
@@ -18,6 +23,7 @@ OUTPUT_DIR = Path(
 
 def latest_file(directory, pattern):
 
+    """Locate the newest matching snapshot by filesystem timestamp. This does not guarantee the newest logical source version when files are copied or restored."""
     files = list(directory.glob(pattern))
 
     if not files:
@@ -33,6 +39,7 @@ def latest_file(directory, pattern):
 
 def normalize_email(series):
 
+    """Trim and lowercase email identifiers before matching. Normalization does not imply email addresses are unique customer identifiers."""
     return (
         series
         .astype("string")
@@ -43,6 +50,7 @@ def normalize_email(series):
 
 def normalize_phone(series):
 
+    """Standardize phone values for comparison; absent or malformed numbers must remain distinguishable from valid identifiers."""
     return (
         series
         .astype("string")
@@ -60,6 +68,7 @@ def normalize_phone(series):
 
 def normalize_name(series):
 
+    """Normalize names for comparison; names alone are not reliable unique keys."""
     return (
         series
         .astype("string")
@@ -70,6 +79,7 @@ def normalize_name(series):
 
 def resolve_identity():
 
+    """Normalize and compare source/customer attributes to produce a canonical customer ID mapping and capture unresolved matches."""
     sql_file = latest_file(
         SQL_BRONZE_DIR,
         "customers_*.parquet"

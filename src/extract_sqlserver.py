@@ -1,3 +1,8 @@
+"""Extract the SQL Server Customers table to a timestamped landing dataset. The result represents a snapshot of the query, not the full history of customer changes."""
+
+# SOURCE CONTRACT: Extracted customer rows are snapshots; a hard delete may be
+# invisible without comparison to prior snapshots or a source change log.
+
 import pyodbc
 import pandas as pd
 from datetime import datetime
@@ -21,6 +26,7 @@ LANDING_DIR = Path("data/landing/sqlserver/customers")
 
 def extract_customers():
 
+    """Read the current customer table from SQL Server and land the extracted snapshot for downstream processing."""
     query = """
         SELECT
             CustomerID,

@@ -1,3 +1,8 @@
+"""Aggregate Silver orders into customer-level metrics. Check the aggregation grain and treatment of cancelled, returned, and invalid records before using metrics for financial reporting."""
+
+# METRIC CONTRACT: Decide whether cancelled/returned orders contribute to
+# revenue and document the rule before treating this as reconciled finance.
+
 from pathlib import Path
 
 import pandas as pd
@@ -18,6 +23,7 @@ OUTPUT_DIR = Path(
 
 def build_customer_order_summary():
 
+    """Aggregate order records into customer-level analytical metrics; validate grouping keys and business definitions."""
     customers = pd.read_parquet(
         CUSTOMER_FILE,
         columns=[

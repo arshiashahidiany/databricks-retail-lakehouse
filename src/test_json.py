@@ -1,3 +1,5 @@
+"""Local smoke-test utility for inspecting generated JSON content. This is not a production data-quality test suite."""
+
 import json
 
 file_path = "data/source/json/customer_updates.json"
